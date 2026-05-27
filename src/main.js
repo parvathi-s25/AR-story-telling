@@ -32,6 +32,7 @@ class ARStorytellingOptionAApp {
       onHitPose: (matrix, visible) => this.state.setHitPose(matrix, visible),
       onSessionChange: (active) => {
         this.state.setXRActive(active);
+        document.body.classList.toggle('xr-session-active', active);
         this.desktopGrid.visible = !active;
       },
       onError: (error) => console.error('WebXR hit test setup failed:', error)

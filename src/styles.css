@@ -165,3 +165,92 @@ button.secondary {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* AR mode overlay behavior:
+   The large debug panel is useful before AR starts, but it blocks the camera view
+   once immersive-ar begins. In AR, hide it automatically and show a small HUD. */
+.debug-panel.is-hidden-in-ar {
+  display: none;
+}
+
+.ar-panel-warning {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.38);
+  background: rgba(180, 83, 9, 0.18);
+  color: #fde68a;
+}
+
+.ar-panel-warning span {
+  color: #fde68a;
+  font-size: 11px;
+}
+
+.ar-hud {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 24px));
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.36);
+}
+
+.ar-hud.is-visible {
+  display: flex;
+}
+
+.ar-hud__text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ar-hud__text strong {
+  font-size: 12px;
+  color: #f8fafc;
+}
+
+.ar-hud__text span {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.ar-hud__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ar-hud button {
+  padding: 8px 10px;
+  border-radius: 999px;
+}
+
+@media (max-width: 640px) {
+  .ar-hud {
+    bottom: 70px;
+    border-radius: 16px;
+  }
+
+  .ar-hud__text span {
+    max-width: 150px;
+  }
+}

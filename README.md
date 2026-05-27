@@ -90,3 +90,13 @@ After this is stable, the next milestone can be:
 
 - Add GLB/GLTF character loading inside the page boundary, or
 - Upgrade to Option D by adding OpenCV.js quadrilateral page boundary detection.
+
+## Update: AR UI overlay behavior
+
+When a real `immersive-ar` session starts, the large debug panel now hides automatically so it does not block the camera view. A small AR HUD remains near the bottom with:
+
+- current AR/hit/page status
+- a `Place page` / `Update page` button
+- a `Debug` button to temporarily reopen the full panel
+
+You can also tap the AR view to place/update the page from the current reticle.

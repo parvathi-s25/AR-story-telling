@@ -3,10 +3,15 @@ export class DebugPanel {
     this.root = root;
     this.appState = appState;
     this.actions = actions;
+    this.forceDebugOpenInAR = false;
 
     this.container = document.createElement('section');
     this.container.className = 'debug-panel';
     this.root.appendChild(this.container);
+
+    this.arHud = document.createElement('section');
+    this.arHud.className = 'ar-hud';
+    this.root.appendChild(this.arHud);
 
     this.appState.addEventListener('change', () => this.render());
     this.render();
@@ -17,12 +22,32 @@ export class DebugPanel {
     const confidence = contracts.trackingConfidence;
     const hasPage = Boolean(contracts.pageBoundary);
     const canPlace = Boolean(this.appState.lastHitMatrix);
+    const xrActive = Boolean(contracts.xrActive);
+    const shouldHidePanelInAR = xrActive && !this.forceDebugOpenInAR;
+
+    this.container.classList.toggle('is-hidden-in-ar', shouldHidePanelInAR);
+    this.renderFullPanel({ contracts, confidence, hasPage, canPlace, xrActive });
+    this.renderARHud({ contracts, confidence, hasPage, canPlace, xrActive });
+  }
+
+  renderFullPanel({ contracts, confidence, hasPage, canPlace, xrActive }) {
+    const arPanelControls = xrActive
+      ? `
+        <div class="ar-panel-warning">
+          <strong>AR session is active.</strong>
+          <span>The full debug panel is covering the camera view.</span>
+          <button data-action="hidePanel" class="secondary">Hide debug panel</button>
+        </div>
+      `
+      : '';
 
     this.container.innerHTML = `
       <h1>AR Storytelling — Phase 2/3 MVP</h1>
       <p>
         Option A: WebXR hit-test placement + page-local clamp. This build intentionally avoids OpenCV/Canny auto page detection.
       </p>
+
+      ${arPanelControls}
 
       <div class="status-grid">
         <div class="status-card">
@@ -45,7 +70,7 @@ export class DebugPanel {
 
       <div class="button-row">
         <button data-action="place" ${canPlace ? '' : 'disabled'}>Place / update page from reticle</button>
-        <button data-action="mock" class="secondary">Mock place page</button>
+        <button data-action="mock" class="secondary" ${xrActive ? 'disabled' : ''}>Mock place page</button>
         <button data-action="reset" class="danger" ${hasPage ? '' : 'disabled'}>Reset page</button>
       </div>
 
@@ -77,6 +102,33 @@ export class DebugPanel {
 
     this.container.querySelectorAll('button[data-action]').forEach((button) => {
       button.addEventListener('click', () => this.handleAction(button.dataset.action));
+    });
+  }
+
+  renderARHud({ contracts, confidence, hasPage, canPlace, xrActive }) {
+    this.arHud.classList.toggle('is-visible', xrActive && !this.forceDebugOpenInAR);
+
+    if (!xrActive || this.forceDebugOpenInAR) {
+      this.arHud.innerHTML = '';
+      return;
+    }
+
+    const hitLabel = contracts.latestHit?.visible ? 'hit visible' : 'scan surface';
+    const pageLabel = hasPage ? 'page placed' : 'page not placed';
+
+    this.arHud.innerHTML = `
+      <div class="ar-hud__text">
+        <strong>AR active</strong>
+        <span>${hitLabel} · ${pageLabel} · ${confidence.overall.state}</span>
+      </div>
+      <div class="ar-hud__actions">
+        <button data-ar-action="place" ${canPlace ? '' : 'disabled'}>${hasPage ? 'Update page' : 'Place page'}</button>
+        <button data-ar-action="showDebug" class="secondary">Debug</button>
+      </div>
+    `;
+
+    this.arHud.querySelectorAll('button[data-ar-action]').forEach((button) => {
+      button.addEventListener('click', () => this.handleARHudAction(button.dataset.arAction));
     });
   }
 
@@ -120,6 +172,24 @@ export class DebugPanel {
         break;
       case 'copyJson':
         await this.copyContracts();
+        break;
+      case 'hidePanel':
+        this.forceDebugOpenInAR = false;
+        this.render();
+        break;
+      default:
+        break;
+    }
+  }
+
+  handleARHudAction(action) {
+    switch (action) {
+      case 'place':
+        this.actions.placePage();
+        break;
+      case 'showDebug':
+        this.forceDebugOpenInAR = true;
+        this.render();
         break;
       default:
         break;
