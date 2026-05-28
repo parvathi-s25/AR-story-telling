@@ -15,6 +15,7 @@ export class WebXRHitTestManager {
 
     this.hitTestSource = null;
     this.hitTestSourceRequested = false;
+    this.surfaceLocked = false;
 
     this.handleSessionStart = this.handleSessionStart.bind(this);
     this.handleSessionEnd = this.handleSessionEnd.bind(this);
@@ -35,9 +36,18 @@ export class WebXRHitTestManager {
 
     this.hitTestSource = null;
     this.hitTestSourceRequested = false;
+    this.surfaceLocked = false;
     this.reticle.visible = false;
     this.onHitPose?.(null, false);
     this.onSessionChange?.(false);
+  }
+
+  setSurfaceLocked(locked) {
+    this.surfaceLocked = locked;
+
+    if (locked) {
+      this.reticle.visible = false;
+    }
   }
 
   async ensureHitTestSource(session) {
@@ -59,6 +69,14 @@ export class WebXRHitTestManager {
 
   update(frame) {
     if (!frame) {
+      return;
+    }
+
+    // Once the page plane is locked, stop updating the reticle/hit pose.
+    // This prevents accidental plane changes and makes the placed page anchor stable
+    // until the user explicitly presses Reset page.
+    if (this.surfaceLocked) {
+      this.reticle.visible = false;
       return;
     }
 

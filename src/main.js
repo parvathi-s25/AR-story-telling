@@ -34,6 +34,7 @@ class ARStorytellingOptionAApp {
         this.state.setXRActive(active);
         document.body.classList.toggle('xr-session-active', active);
         this.desktopGrid.visible = !active;
+        this.hitTestManager.setSurfaceLocked(this.state.pageLocked);
       },
       onError: (error) => console.error('WebXR hit test setup failed:', error)
     });
@@ -65,7 +66,7 @@ class ARStorytellingOptionAApp {
       actions: {
         placePage: () => this.placePage(),
         placeMockPage: () => this.placeMockPage(),
-        resetPage: () => this.state.resetPage(),
+        resetPage: () => this.resetPage(),
         resizePage: (args) => this.state.resizePage(args),
         moveActor: (dx, dz) => this.state.moveActorLocal(dx, dz),
         randomClamp: () => this.state.sendActorOutsideThenClamp()
@@ -81,9 +82,22 @@ class ARStorytellingOptionAApp {
   placePage() {
     const placed = this.state.placePageFromCurrentHit();
 
-    if (!placed) {
-      console.warn('Cannot place page yet. Wait until the WebXR reticle appears or use mock mode.');
+    if (placed) {
+      this.hitTestManager.setSurfaceLocked(true);
+      return;
     }
+
+    if (this.state.pageLocked) {
+      console.warn('Page is already locked. Press Reset page before placing another plane.');
+      return;
+    }
+
+    console.warn('Cannot place page yet. Wait until the WebXR reticle appears or use mock mode.');
+  }
+
+  resetPage() {
+    this.state.resetPage();
+    this.hitTestManager.setSurfaceLocked(false);
   }
 
   placeMockPage() {
@@ -92,7 +106,10 @@ class ARStorytellingOptionAApp {
       return;
     }
 
-    this.state.placeMockPage();
+    const placed = this.state.placeMockPage();
+    if (placed) {
+      this.hitTestManager.setSurfaceLocked(true);
+    }
   }
 
   updateDebugRenderers() {

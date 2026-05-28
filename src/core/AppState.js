@@ -20,6 +20,8 @@ export class AppState extends EventTarget {
 
     this.pageAnchor = null;
     this.boundaryClamp = null;
+    this.pageLocked = false;
+    this.pageLockedTimestampMs = 0;
     this.actorLocalPosition = new THREE.Vector3(0, 0.035, 0);
 
     this.trackingConfidence = new TrackingConfidence();
@@ -34,11 +36,20 @@ export class AppState extends EventTarget {
     this.hitVisible = visible;
     this.lastHitMatrix = visible && matrix ? matrix.clone() : this.lastHitMatrix;
     this.lastHitTimestampMs = visible ? performance.now() : this.lastHitTimestampMs;
-    this.trackingConfidence.update({ hitVisible: this.hitVisible, pagePlaced: Boolean(this.pageAnchor) });
+    this.trackingConfidence.update({
+      hitVisible: this.hitVisible,
+      pagePlaced: Boolean(this.pageAnchor),
+      pageLocked: this.pageLocked
+    });
     this.emitChange();
   }
 
   placePageFromCurrentHit() {
+    if (this.pageLocked) {
+      console.info('Page is already locked. Reset page before placing a new plane.');
+      return false;
+    }
+
     if (!this.lastHitMatrix) {
       return false;
     }
@@ -46,11 +57,14 @@ export class AppState extends EventTarget {
     this.pageAnchor = PageAnchor.fromPoseMatrix(this.lastHitMatrix, {
       widthMeters: this.defaultPageWidthMeters,
       heightMeters: this.defaultPageHeightMeters,
-      source: 'webxr-hit-test'
+      source: 'webxr-hit-test-locked'
     });
 
+    this.pageLocked = true;
+    this.pageLockedTimestampMs = performance.now();
     this.rebuildClamp();
     this.actorLocalPosition.set(0, 0.035, 0);
+    this.trackingConfidence.update({ hitVisible: true, pagePlaced: true, pageLocked: true });
     this.emitChange();
     return true;
   }
@@ -64,12 +78,14 @@ export class AppState extends EventTarget {
     this.pageAnchor = PageAnchor.fromPoseMatrix(matrix, {
       widthMeters: this.defaultPageWidthMeters,
       heightMeters: this.defaultPageHeightMeters,
-      source: 'desktop-mock'
+      source: 'desktop-mock-locked'
     });
 
+    this.pageLocked = true;
+    this.pageLockedTimestampMs = performance.now();
     this.rebuildClamp();
     this.actorLocalPosition.set(0, 0.035, 0);
-    this.trackingConfidence.update({ hitVisible: true, pagePlaced: true });
+    this.trackingConfidence.update({ hitVisible: true, pagePlaced: true, pageLocked: true });
     this.emitChange();
     return true;
   }
@@ -77,8 +93,10 @@ export class AppState extends EventTarget {
   resetPage() {
     this.pageAnchor = null;
     this.boundaryClamp = null;
+    this.pageLocked = false;
+    this.pageLockedTimestampMs = 0;
     this.actorLocalPosition.set(0, 0.035, 0);
-    this.trackingConfidence.update({ hitVisible: this.hitVisible, pagePlaced: false });
+    this.trackingConfidence.update({ hitVisible: this.hitVisible, pagePlaced: false, pageLocked: false });
     this.emitChange();
   }
 
@@ -158,6 +176,8 @@ export class AppState extends EventTarget {
       implementationDirection: 'Option A - WebXR-first MVP',
       timestampMs: round(performance.now(), 2),
       xrActive: this.isXRActive,
+      pageLocked: this.pageLocked,
+      pageLockedTimestampMs: this.pageLocked ? round(this.pageLockedTimestampMs, 2) : null,
       latestHit: this.lastHitMatrix
         ? {
             visible: this.hitVisible,

@@ -21,16 +21,17 @@ export class DebugPanel {
     const contracts = this.appState.getContracts();
     const confidence = contracts.trackingConfidence;
     const hasPage = Boolean(contracts.pageBoundary);
-    const canPlace = Boolean(this.appState.lastHitMatrix);
+    const locked = Boolean(contracts.pageLocked);
+    const canPlace = Boolean(this.appState.lastHitMatrix) && !locked;
     const xrActive = Boolean(contracts.xrActive);
     const shouldHidePanelInAR = xrActive && !this.forceDebugOpenInAR;
 
     this.container.classList.toggle('is-hidden-in-ar', shouldHidePanelInAR);
-    this.renderFullPanel({ contracts, confidence, hasPage, canPlace, xrActive });
-    this.renderARHud({ contracts, confidence, hasPage, canPlace, xrActive });
+    this.renderFullPanel({ contracts, confidence, hasPage, locked, canPlace, xrActive });
+    this.renderARHud({ contracts, confidence, hasPage, locked, canPlace, xrActive });
   }
 
-  renderFullPanel({ contracts, confidence, hasPage, canPlace, xrActive }) {
+  renderFullPanel({ contracts, confidence, hasPage, locked, canPlace, xrActive }) {
     const arPanelControls = xrActive
       ? `
         <div class="ar-panel-warning">
@@ -60,7 +61,7 @@ export class DebugPanel {
         </div>
         <div class="status-card">
           <span>Page</span>
-          <strong>${hasPage ? 'placed' : 'not placed'}</strong>
+          <strong>${hasPage ? (locked ? 'locked' : 'placed') : 'not placed'}</strong>
         </div>
         <div class="status-card">
           <span>Overall</span>
@@ -69,13 +70,13 @@ export class DebugPanel {
       </div>
 
       <div class="button-row">
-        <button data-action="place" ${canPlace ? '' : 'disabled'}>Place / update page from reticle</button>
+        <button data-action="place" ${canPlace ? '' : 'disabled'}>${locked ? 'Page locked' : 'Lock page from reticle'}</button>
         <button data-action="mock" class="secondary" ${xrActive ? 'disabled' : ''}>Mock place page</button>
         <button data-action="reset" class="danger" ${hasPage ? '' : 'disabled'}>Reset page</button>
       </div>
 
       <p class="footer-note">
-        Real AR: press START AR, scan a flat book/table until reticle appears, then tap screen or place from reticle.
+        Real AR: press START AR, scan a flat book/table until the reticle appears, then tap once to lock the page plane. Press Reset page to scan again.
       </p>
 
       <div class="button-row">
@@ -105,7 +106,7 @@ export class DebugPanel {
     });
   }
 
-  renderARHud({ contracts, confidence, hasPage, canPlace, xrActive }) {
+  renderARHud({ contracts, confidence, hasPage, locked, canPlace, xrActive }) {
     this.arHud.classList.toggle('is-visible', xrActive && !this.forceDebugOpenInAR);
 
     if (!xrActive || this.forceDebugOpenInAR) {
@@ -113,8 +114,8 @@ export class DebugPanel {
       return;
     }
 
-    const hitLabel = contracts.latestHit?.visible ? 'hit visible' : 'scan surface';
-    const pageLabel = hasPage ? 'page placed' : 'page not placed';
+    const hitLabel = locked ? 'plane locked' : contracts.latestHit?.visible ? 'hit visible' : 'scan surface';
+    const pageLabel = hasPage ? (locked ? 'page locked' : 'page placed') : 'page not placed';
 
     this.arHud.innerHTML = `
       <div class="ar-hud__text">
@@ -122,7 +123,8 @@ export class DebugPanel {
         <span>${hitLabel} · ${pageLabel} · ${confidence.overall.state}</span>
       </div>
       <div class="ar-hud__actions">
-        <button data-ar-action="place" ${canPlace ? '' : 'disabled'}>${hasPage ? 'Update page' : 'Place page'}</button>
+        <button data-ar-action="place" ${canPlace ? '' : 'disabled'}>${locked ? 'Locked' : 'Lock page'}</button>
+        <button data-ar-action="reset" class="secondary" ${hasPage ? '' : 'disabled'}>Reset</button>
         <button data-ar-action="showDebug" class="secondary">Debug</button>
       </div>
     `;
@@ -186,6 +188,9 @@ export class DebugPanel {
     switch (action) {
       case 'place':
         this.actions.placePage();
+        break;
+      case 'reset':
+        this.actions.resetPage();
         break;
       case 'showDebug':
         this.forceDebugOpenInAR = true;

@@ -100,3 +100,15 @@ When a real `immersive-ar` session starts, the large debug panel now hides autom
 - a `Debug` button to temporarily reopen the full panel
 
 You can also tap the AR view to place/update the page from the current reticle.
+
+## v3 update — locked page plane
+
+This version freezes the page plane after the first successful placement:
+
+1. Start AR.
+2. Scan a flat book/table surface until the reticle is visible.
+3. Tap once or press **Lock page**.
+4. The reticle is hidden and hit-test updates are paused.
+5. The green page rectangle stays on the same captured pose until **Reset** is pressed.
+
+This is required before Phase 4 so animated GLB/GLTF characters have a stable parent transform. If the physical AR tracking system itself drifts slightly, that is device/ARCore tracking drift; the app no longer replaces the page plane every frame or on repeated taps after lock.
