@@ -19,7 +19,7 @@ export class DebugPageRenderer {
     this.currentHeight = 0;
   }
 
-  update({ pageAnchor, boundaryClamp, actorLocalPosition, footprintRadiusMeters }) {
+  update({ pageAnchor, boundaryClamp, actorLocalPosition, footprintRadiusMeters, showDebugActor = true }) {
     if (!pageAnchor) {
       this.pageGroup.visible = false;
       return;
@@ -35,10 +35,12 @@ export class DebugPageRenderer {
 
     if (this.actor) {
       this.actor.position.copy(actorLocalPosition);
+      this.actor.visible = showDebugActor;
     }
 
     if (this.actorFootprint) {
       this.actorFootprint.position.set(actorLocalPosition.x, 0.003, actorLocalPosition.z);
+      this.actorFootprint.visible = showDebugActor;
     }
   }
 

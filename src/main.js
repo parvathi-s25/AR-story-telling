@@ -8,6 +8,7 @@ import { WebXRHitTestManager } from './webxr/WebXRHitTestManager.js';
 import { createCamera, createDesktopGrid, createRenderer, createReticle, createScene } from './render/SceneFactory.js';
 import { DebugPageRenderer } from './render/DebugPageRenderer.js';
 import { DebugPanel } from './ui/DebugPanel.js';
+import { StoryRuntime } from './phase4/StoryRuntime.js';
 
 class ARStorytellingOptionAApp {
   constructor() {
@@ -18,6 +19,7 @@ class ARStorytellingOptionAApp {
     this.scene = createScene();
     this.camera = createCamera();
     this.renderer = createRenderer(this.container);
+    this.clock = new THREE.Clock();
 
     this.reticle = createReticle();
     this.scene.add(this.reticle);
@@ -26,6 +28,8 @@ class ARStorytellingOptionAApp {
     this.scene.add(this.desktopGrid);
 
     this.debugPageRenderer = new DebugPageRenderer(this.scene);
+    this.storyRuntime = new StoryRuntime({ scene: this.scene, appState: this.state });
+
     this.hitTestManager = new WebXRHitTestManager({
       renderer: this.renderer,
       reticle: this.reticle,
@@ -63,13 +67,19 @@ class ARStorytellingOptionAApp {
     this.panel = new DebugPanel({
       root: this.uiRoot,
       appState: this.state,
+      getPhase4Status: () => this.storyRuntime.getStatus(),
       actions: {
         placePage: () => this.placePage(),
         placeMockPage: () => this.placeMockPage(),
         resetPage: () => this.resetPage(),
         resizePage: (args) => this.state.resizePage(args),
         moveActor: (dx, dz) => this.state.moveActorLocal(dx, dz),
-        randomClamp: () => this.state.sendActorOutsideThenClamp()
+        randomClamp: () => this.state.sendActorOutsideThenClamp(),
+        loadSampleStory: () => this.storyRuntime.loadStory(),
+        playStory: () => this.storyRuntime.play(),
+        pauseStory: () => this.storyRuntime.pause(),
+        restartStory: () => this.storyRuntime.restart(),
+        stopStory: () => this.storyRuntime.stop()
       }
     });
   }
@@ -77,6 +87,10 @@ class ARStorytellingOptionAApp {
   setupEvents() {
     window.addEventListener('resize', () => this.onResize());
     this.state.addEventListener('change', () => this.updateDebugRenderers());
+    this.storyRuntime.addEventListener('change', () => {
+      this.updateDebugRenderers();
+      this.panel?.render();
+    });
   }
 
   placePage() {
@@ -117,15 +131,19 @@ class ARStorytellingOptionAApp {
       pageAnchor: this.state.pageAnchor,
       boundaryClamp: this.state.boundaryClamp,
       actorLocalPosition: this.state.actorLocalPosition,
-      footprintRadiusMeters: this.state.footprintRadiusMeters
+      footprintRadiusMeters: this.state.footprintRadiusMeters,
+      showDebugActor: !this.storyRuntime.hasLoadedCharacters()
     });
   }
 
   animate(_timestamp, frame) {
+    const deltaSeconds = Math.min(this.clock.getDelta(), 0.05);
+
     if (frame) {
       this.hitTestManager.update(frame);
     }
 
+    this.storyRuntime.update(deltaSeconds);
     this.renderer.render(this.scene, this.camera);
   }
 

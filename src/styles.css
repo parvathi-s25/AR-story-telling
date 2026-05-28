@@ -254,3 +254,43 @@ button.secondary {
     max-width: 150px;
   }
 }
+
+.phase4-panel {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 12px;
+  background: rgba(8, 47, 73, 0.22);
+}
+
+.phase4-panel h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.2;
+  color: #bae6fd;
+}
+
+.status-grid.compact {
+  grid-template-columns: repeat(2, 1fr);
+  margin: 8px 0;
+}
+
+.warning-note {
+  margin: 8px 0 0;
+  padding: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  background: rgba(180, 83, 9, 0.16);
+  color: #fde68a !important;
+}
+
+.json-details {
+  margin-top: 8px;
+}
+
+.json-details summary {
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 650;
+}

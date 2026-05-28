@@ -112,3 +112,65 @@ This version freezes the page plane after the first successful placement:
 5. The green page rectangle stays on the same captured pose until **Reset** is pressed.
 
 This is required before Phase 4 so animated GLB/GLTF characters have a stable parent transform. If the physical AR tracking system itself drifts slightly, that is device/ARCore tracking drift; the app no longer replaces the page plane every frame or on repeated taps after lock.
+
+## v4 update — Phase 4 GLB/GLTF character runtime
+
+This version adds the first Phase 4 implementation on top of the locked Phase 2/3 page anchor.
+
+### What was added
+
+- `StoryRuntime` for Phase 4 orchestration.
+- GLB/GLTF loading using Three.js `GLTFLoader`.
+- A sample story JSON at `public/story/sample-story.json`.
+- A tiny placeholder character model at `public/assets/characters/sample-character.gltf`.
+- Character transform parenting under the locked page anchor.
+- Timeline-based movement, rotation, visibility, and optional GLTF animation clip playback.
+- Page-local root clamping so the character stays inside the boundary.
+- Phase 4 runtime JSON contract in the debug panel.
+
+### Phase 4 test flow
+
+Desktop mock test:
+
+```text
+Mock place page
+→ Load sample story
+→ Play
+→ the sample character should move on the locked page rectangle
+```
+
+Real WebXR test:
+
+```text
+START AR
+→ scan book/table
+→ tap once to lock page
+→ open Debug if needed
+→ Load sample story
+→ Play
+→ the GLTF character should move on the locked page anchor
+```
+
+### Replacing the sample character
+
+Put your own model in:
+
+```text
+public/assets/characters/
+```
+
+Then update `public/story/sample-story.json`:
+
+```json
+{
+  "characters": {
+    "hero": {
+      "assetUrl": "/assets/characters/your-character.glb",
+      "scale": 0.08,
+      "footprintRadiusMeters": 0.025
+    }
+  }
+}
+```
+
+Keep the model small and optimized for mobile AR. Start with one character first. Large GLB files, heavy textures, and many skeletal animations can cause dropped frames on phones.

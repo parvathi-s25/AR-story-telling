@@ -1,7 +1,8 @@
 export class DebugPanel {
-  constructor({ root, appState, actions }) {
+  constructor({ root, appState, getPhase4Status, actions }) {
     this.root = root;
     this.appState = appState;
+    this.getPhase4Status = getPhase4Status;
     this.actions = actions;
     this.forceDebugOpenInAR = false;
 
@@ -19,6 +20,7 @@ export class DebugPanel {
 
   render() {
     const contracts = this.appState.getContracts();
+    const phase4 = this.getPhase4Status?.() ?? null;
     const confidence = contracts.trackingConfidence;
     const hasPage = Boolean(contracts.pageBoundary);
     const locked = Boolean(contracts.pageLocked);
@@ -27,11 +29,11 @@ export class DebugPanel {
     const shouldHidePanelInAR = xrActive && !this.forceDebugOpenInAR;
 
     this.container.classList.toggle('is-hidden-in-ar', shouldHidePanelInAR);
-    this.renderFullPanel({ contracts, confidence, hasPage, locked, canPlace, xrActive });
-    this.renderARHud({ contracts, confidence, hasPage, locked, canPlace, xrActive });
+    this.renderFullPanel({ contracts, phase4, confidence, hasPage, locked, canPlace, xrActive });
+    this.renderARHud({ contracts, phase4, confidence, hasPage, locked, canPlace, xrActive });
   }
 
-  renderFullPanel({ contracts, confidence, hasPage, locked, canPlace, xrActive }) {
+  renderFullPanel({ contracts, phase4, confidence, hasPage, locked, canPlace, xrActive }) {
     const arPanelControls = xrActive
       ? `
         <div class="ar-panel-warning">
@@ -42,10 +44,15 @@ export class DebugPanel {
       `
       : '';
 
+    const storyLoaded = Boolean(phase4?.loaded);
+    const storyLoading = Boolean(phase4?.loading);
+    const storyReadyToPlay = storyLoaded && locked;
+    const phase4Contracts = phase4 ? JSON.stringify(phase4, null, 2) : '{}';
+
     this.container.innerHTML = `
-      <h1>AR Storytelling — Phase 2/3 MVP</h1>
+      <h1>AR Storytelling — Phase 2/3/4 MVP</h1>
       <p>
-        Option A: WebXR hit-test placement + page-local clamp. This build intentionally avoids OpenCV/Canny auto page detection.
+        Option A: WebXR hit-test placement + locked page-local clamp. Phase 4 adds GLB/GLTF loading and timeline sync on the locked page anchor.
       </p>
 
       ${arPanelControls}
@@ -86,6 +93,40 @@ export class DebugPanel {
         <button data-action="heightPlus" ${hasPage ? '' : 'disabled'}>Height +</button>
       </div>
 
+      <section class="phase4-panel">
+        <h2>Phase 4 — Story character runtime</h2>
+        <p>
+          Load the sample story, lock a page, then press Play. The character is parented to the locked page anchor and its root is clamped inside the page boundary.
+        </p>
+        <div class="status-grid compact">
+          <div class="status-card">
+            <span>Story</span>
+            <strong>${storyLoading ? 'loading' : storyLoaded ? 'loaded' : 'not loaded'}</strong>
+          </div>
+          <div class="status-card">
+            <span>Playback</span>
+            <strong>${phase4?.playing ? 'playing' : 'paused'}</strong>
+          </div>
+          <div class="status-card">
+            <span>Time</span>
+            <strong>${phase4 ? Math.round(phase4.currentTimeMs) : 0} / ${phase4 ? Math.round(phase4.durationMs) : 0} ms</strong>
+          </div>
+          <div class="status-card">
+            <span>Characters</span>
+            <strong>${phase4?.characters?.length ?? 0}</strong>
+          </div>
+        </div>
+        <div class="button-row">
+          <button data-action="loadSampleStory" ${storyLoading ? 'disabled' : ''}>Load sample story</button>
+          <button data-action="playStory" ${storyReadyToPlay ? '' : 'disabled'}>Play</button>
+          <button data-action="pauseStory" ${storyLoaded ? '' : 'disabled'} class="secondary">Pause</button>
+          <button data-action="restartStory" ${storyReadyToPlay ? '' : 'disabled'} class="secondary">Restart</button>
+          <button data-action="stopStory" ${storyLoaded ? '' : 'disabled'} class="secondary">Stop</button>
+        </div>
+        ${!locked ? '<p class="warning-note">Lock the page first before playing the character on the page.</p>' : ''}
+        ${phase4?.lastError ? `<p class="warning-note">${escapeHtml(phase4.lastError)}</p>` : ''}
+      </section>
+
       <div class="control-grid">
         <button data-action="moveLeft" ${hasPage ? '' : 'disabled'}>← X</button>
         <button data-action="moveForward" ${hasPage ? '' : 'disabled'}>↑ Z</button>
@@ -98,7 +139,15 @@ export class DebugPanel {
         <button data-action="copyJson" class="secondary">Copy JSON</button>
       </div>
 
-      <pre class="json-box">${escapeHtml(JSON.stringify(contracts, null, 2))}</pre>
+      <details class="json-details" open>
+        <summary>Phase 2/3 contracts</summary>
+        <pre class="json-box">${escapeHtml(JSON.stringify(contracts, null, 2))}</pre>
+      </details>
+
+      <details class="json-details">
+        <summary>Phase 4 runtime contract</summary>
+        <pre class="json-box">${escapeHtml(phase4Contracts)}</pre>
+      </details>
     `;
 
     this.container.querySelectorAll('button[data-action]').forEach((button) => {
@@ -106,7 +155,7 @@ export class DebugPanel {
     });
   }
 
-  renderARHud({ contracts, confidence, hasPage, locked, canPlace, xrActive }) {
+  renderARHud({ contracts, phase4, confidence, hasPage, locked, canPlace, xrActive }) {
     this.arHud.classList.toggle('is-visible', xrActive && !this.forceDebugOpenInAR);
 
     if (!xrActive || this.forceDebugOpenInAR) {
@@ -116,14 +165,17 @@ export class DebugPanel {
 
     const hitLabel = locked ? 'plane locked' : contracts.latestHit?.visible ? 'hit visible' : 'scan surface';
     const pageLabel = hasPage ? (locked ? 'page locked' : 'page placed') : 'page not placed';
+    const storyLabel = phase4?.loaded ? (phase4.playing ? 'story playing' : 'story ready') : 'story not loaded';
+    const canPlayStory = Boolean(phase4?.loaded && locked);
 
     this.arHud.innerHTML = `
       <div class="ar-hud__text">
         <strong>AR active</strong>
-        <span>${hitLabel} · ${pageLabel} · ${confidence.overall.state}</span>
+        <span>${hitLabel} · ${pageLabel} · ${storyLabel} · ${confidence.overall.state}</span>
       </div>
       <div class="ar-hud__actions">
         <button data-ar-action="place" ${canPlace ? '' : 'disabled'}>${locked ? 'Locked' : 'Lock page'}</button>
+        <button data-ar-action="storyToggle" ${canPlayStory ? '' : 'disabled'}>${phase4?.playing ? 'Pause' : 'Play'}</button>
         <button data-ar-action="reset" class="secondary" ${hasPage ? '' : 'disabled'}>Reset</button>
         <button data-ar-action="showDebug" class="secondary">Debug</button>
       </div>
@@ -172,6 +224,21 @@ export class DebugPanel {
       case 'randomClamp':
         this.actions.randomClamp();
         break;
+      case 'loadSampleStory':
+        await this.actions.loadSampleStory();
+        break;
+      case 'playStory':
+        this.actions.playStory();
+        break;
+      case 'pauseStory':
+        this.actions.pauseStory();
+        break;
+      case 'restartStory':
+        this.actions.restartStory();
+        break;
+      case 'stopStory':
+        this.actions.stopStory();
+        break;
       case 'copyJson':
         await this.copyContracts();
         break;
@@ -192,6 +259,12 @@ export class DebugPanel {
       case 'reset':
         this.actions.resetPage();
         break;
+      case 'storyToggle': {
+        const phase4 = this.getPhase4Status?.();
+        if (phase4?.playing) this.actions.pauseStory();
+        else this.actions.playStory();
+        break;
+      }
       case 'showDebug':
         this.forceDebugOpenInAR = true;
         this.render();
@@ -202,7 +275,11 @@ export class DebugPanel {
   }
 
   async copyContracts() {
-    const text = JSON.stringify(this.appState.getContracts(), null, 2);
+    const payload = {
+      phase23: this.appState.getContracts(),
+      phase4: this.getPhase4Status?.() ?? null
+    };
+    const text = JSON.stringify(payload, null, 2);
 
     try {
       await navigator.clipboard.writeText(text);
@@ -213,7 +290,7 @@ export class DebugPanel {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')

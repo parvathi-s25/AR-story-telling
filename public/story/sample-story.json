@@ -1,0 +1,62 @@
+{
+  "storyId": "sample-phase4-story",
+  "title": "Sample Locked-Page Character Demo",
+  "version": 1,
+  "durationMs": 12000,
+  "loop": true,
+  "characters": {
+    "hero": {
+      "displayName": "Hero",
+      "assetUrl": "/assets/characters/sample-character.gltf",
+      "scale": 0.08,
+      "footprintRadiusMeters": 0.025,
+      "groundOffsetMeters": 0,
+      "initialLocalPosition": { "x": -0.08, "y": 0, "z": 0.12 },
+      "initialRotationYDeg": 0
+    }
+  },
+  "timeline": [
+    {
+      "id": "hero-enter-left-to-right",
+      "characterId": "hero",
+      "type": "move",
+      "startMs": 0,
+      "endMs": 3500,
+      "from": { "x": -0.09, "y": 0, "z": 0.12 },
+      "to": { "x": 0.09, "y": 0, "z": 0.12 },
+      "rotationYDeg": 90,
+      "animationClip": "Walk"
+    },
+    {
+      "id": "hero-turn-to-reader",
+      "characterId": "hero",
+      "type": "rotate",
+      "startMs": 3500,
+      "endMs": 5000,
+      "fromRotationYDeg": 90,
+      "toRotationYDeg": 180,
+      "animationClip": "Idle"
+    },
+    {
+      "id": "hero-walk-towards-top",
+      "characterId": "hero",
+      "type": "move",
+      "startMs": 5000,
+      "endMs": 8500,
+      "from": { "x": 0.09, "y": 0, "z": 0.12 },
+      "to": { "x": 0.0, "y": 0, "z": -0.11 },
+      "rotationYDeg": 180,
+      "animationClip": "Walk"
+    },
+    {
+      "id": "hero-idle-center",
+      "characterId": "hero",
+      "type": "pose",
+      "startMs": 8500,
+      "endMs": 12000,
+      "position": { "x": 0.0, "y": 0, "z": -0.11 },
+      "rotationYDeg": 180,
+      "animationClip": "Idle"
+    }
+  ]
+}
